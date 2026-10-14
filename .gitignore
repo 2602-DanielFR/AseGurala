@@ -1,0 +1,46 @@
+# Dependencies
+vendor/
+node_modules/
+
+# Environment files
+.env
+.env.backup
+.env.*.local
+
+# Laravel
+bootstrap/cache/
+storage/
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/framework/testing/*
+!storage/framework/.gitkeep
+!storage/.gitkeep
+
+# Logs
+storage/logs/*.log
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.phpunit.result.cache
+coverage/
+
+# Misc
+*.sqlite
+database/database.sqlite
+*.pyc
+__pycache__/
+
+# Arduino/Python scripts (local only)
+*.py
+!*.py.example
