@@ -37,6 +37,7 @@ class DocenteController extends Controller
         $ahora = Carbon::now('America/Lima');
         $dia = $ahora->dayOfWeekIso;
 
+        // Obtenemos los horarios del día actual primero (y si no tiene hoy, mostramos los de otros días)
         $horarios = DB::table('horarios')
             ->join(
                 'docente_curso',
@@ -48,9 +49,9 @@ class DocenteController extends Controller
             ->where('docente_curso.docente_id', $docente->id)
             ->where('horarios.estado', true)
             ->where('cursos.estado', true)
-            // ->where('horarios.dia_semana', $dia)
             ->select(
                 'horarios.id',
+                'cursos.id as curso_id',
                 'cursos.codigo',
                 'cursos.nombre',
                 'horarios.seccion',
@@ -58,8 +59,10 @@ class DocenteController extends Controller
                 'horarios.hora_inicio',
                 'horarios.hora_fin'
             )
+            ->orderByRaw('CASE WHEN horarios.dia_semana = ? THEN 0 ELSE 1 END', [$dia])
+            ->orderBy('horarios.hora_inicio')
             ->get()
-            ->map(function ($horario) use ($ahora) {
+            ->map(function ($horario) use ($ahora, $dia) {
                 $fecha = $ahora->toDateString();
 
                 $inicio = Carbon::parse(
@@ -81,20 +84,27 @@ class DocenteController extends Controller
                 $horario->sesion_estado = $sesion->estado ?? null;
 
                 $apertura = $inicio->copy()->subMinutes(10);
+                $esDiaCorrecto = ((int) $horario->dia_semana === (int) $dia);
 
+                $horario->es_hoy = $esDiaCorrecto;
                 $horario->puede_iniciar =
                     !$sesion
+                    && $esDiaCorrecto
                     && $ahora->greaterThanOrEqualTo($apertura)
                     && $ahora->lessThan($fin);
 
                 return $horario;
             });
 
+        // Filtrar para mostrar en el selector prioritariamente los horarios del día de hoy (o uno por curso/sección)
+        $horariosHoy = $horarios->where('es_hoy', true)->values();
+        $horariosParaSelector = $horariosHoy->isNotEmpty() ? $horariosHoy : $horarios->unique(fn ($h) => $h->curso_id . '-' . $h->seccion)->values();
+
         return response()->json([
             'encontrado' => true,
             'docente' => $docente,
             'cursos' => $cursos,
-            'horarios' => $horarios
+            'horarios' => $horariosParaSelector
         ]);
     }
 }
